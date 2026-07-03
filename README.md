@@ -1,6 +1,6 @@
 # Cohub Desktop（Tauri）—— 最小闭环原型
 
-> **未在本环境编译验证**：当前沙箱无 Rust/Cargo 工具链，本项目只写出骨架代码，未运行过 `cargo build` / `cargo tauri dev`。在你本地有 Rust + Tauri 工具链的机器上验证。
+> **验证状态**：核心 Rust 逻辑（`auth.rs`/`api.rs`/`ws.rs`：device flow 登录、HTTP API、WebSocket 事件解析）已在真实 Rust 编译器上编译通过，并用真实账号、真实 WebSocket 事件做了端到端运行时验证（细节见下方"已验证"章节）。**Tauri GUI 层尚未编译验证**：当前开发环境无 root 权限，无法安装 `webkit2gtk` 等 Tauri 所需的系统依赖，因此 `cargo tauri dev` / `cargo tauri build` 还没跑过。在有完整 Tauri 前置依赖的机器上运行验证。
 
 ## 这是什么
 
@@ -16,7 +16,7 @@ Cohub 桌面端"周边"应用的最小闭环原型：
 
 ## 协议来源
 
-所有端点、字段名、事件格式均来自 `docs/experiments/2026-07-02-cohub-companion-apps.md` 中已经用 Node.js 脚本实测验证过的结果，不是猜测或凭空实现。
+所有端点、字段名、事件格式均来自实测验证过的结果（参见上方"已验证"章节），不是猜测或凭空实现。
 
 ## 目录结构
 
@@ -56,9 +56,23 @@ cargo tauri dev
    [turn] ✅ finalized status=completed
    ```
 
+## 已验证
+
+在开发环境中安装 Rust/cargo 后，对本仓库的 `auth.rs`/`api.rs`/`ws.rs` 三个核心模块做了真实编译 + 运行时验证（方法：拷贝这三个不依赖 GUI 的模块到一个临时的纯 binary crate 里，TLS 依赖换成纯 Rust 实现的 `rustls`，不需要系统 OpenSSL/pkg-config）：
+
+- **编译成功**，无任何错误。
+- **Device flow 登录**：真实用户完成浏览器授权后，成功拿到 `access_token`，并正确写入本地 `~/.config/cohub-desktop/session.json`。
+- **whoami**：`GET /api/me` 返回真实用户信息。
+- **spaces 列表**：`GET /api/spaces` 正确解析，且验证了“只取 `id`/`name`，不解析 `extraEnv`”的脱敏处理写法能正常工作。
+- **WebSocket 订阅 + 真实 turn 事件解析**：订阅一个真实 Space 后，在一个独立测试 Chat 里触发一次真实 prompt，成功收到并正确解析出：
+  - `TurnSignal::LlmRoundStarted { session_id, turn_id, llm_round: Some(1), provider: "cohub", model: "gpt-5.4" }`
+  - `TurnSignal::TurnFinalized { session_id, turn_id, status: "completed" }`
+
+详细验证记录（包含协议逐项实测结果）参见本项目所属实验的记录文件 `docs/experiments/2026-07-02-cohub-companion-apps.md`（在实验仓库中，本项目是从那个实验中拆出来的原型）。
+
 ## 已知限制 / 未验证项
 
-- 未验证能否编译通过（Rust 依赖版本、Tauri API 用法可能需要微调）。
+- **Tauri GUI 层未编译验证**：需要 `webkit2gtk` 等系统依赖，本开发环境无 root 权限无法安装，未验证窗口能否正常显示、按钮交互、前端 `invoke`/`listen` 调用是否按预期工作。
 - 未验证 WebSocket 断线重连逻辑的实际行为（代码里有基础重连，但未跑过真实断网场景）。
 - token 明文存储在本地文件（`~/.config/cohub-desktop/session.json`），未加密。生产化前需要加固（如系统 keychain）。
 - 只订阅一个 Space（硬编码从 `/api/spaces` 拿到的第一个），未做多 Space 管理 UI。
