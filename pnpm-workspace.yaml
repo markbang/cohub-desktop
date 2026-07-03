@@ -1,3 +1,5 @@
-onlyBuiltDependencies:
-  - esbuild
+# pnpm 11: 构建脚本审批移到这里。esbuild 的 postinstall 解压平台二进制，
+# 在 CI（frozen-lockfile）下若未审批会以 ERR_PNPM_IGNORED_BUILDS 退出。
+allowBuilds:
+  esbuild: true
 verifyDepsBeforeRun: false
