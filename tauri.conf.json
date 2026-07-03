@@ -6,6 +6,11 @@
   "build": {
     "frontendDist": "ui"
   },
+  "bundle": {
+    "icon": [
+      "icons/icon.png"
+    ]
+  },
   "app": {
     "windows": [
       {

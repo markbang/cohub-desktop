@@ -7,7 +7,7 @@ mod auth;
 mod ws;
 
 use serde::Serialize;
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 #[derive(Debug, Serialize, Clone)]
 struct LogEvent {
