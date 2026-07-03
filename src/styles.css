@@ -1,0 +1,61 @@
+/* Kumo 主题 token 必须先于 tailwindcss 注册（顺序不可换）。
+   @source 让 Tailwind v4 扫描 kumo dist 里的 utility class，否则组件会丢样式。 */
+@source "../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@import "@cloudflare/kumo/styles/tailwind";
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* 生成中状态的呼吸点；仅在用户允许动效时启用。 */
+.live-dot {
+  animation: kumo-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes kumo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+
+/* 细滚动条，贴合 kumo 中性色。 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--kumo-color-fill, #d4d4d8) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--kumo-color-fill, #d4d4d8);
+  border-radius: 8px;
+}

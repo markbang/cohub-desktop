@@ -1,0 +1,25 @@
+[package]
+name = "cohub-desktop"
+version = "0.0.1"
+edition = "2021"
+description = "Cohub desktop companion: device-flow auth, realtime turn notifications, cloud-drive mount (prototype)"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+reqwest = { version = "0.12", features = ["json"] }
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+directories = "5"
+thiserror = "1"
+open = "5"
+notify-rust = "4"
+
+[[bin]]
+name = "cohub-desktop"
+path = "src/main.rs"
