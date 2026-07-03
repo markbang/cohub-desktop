@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "cohub-desktop",
+  "version": "0.1.0",
+  "identifier": "run.cohub.desktop.prototype",
+  "build": {
+    "frontendDist": "ui"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Cohub Desktop (prototype)",
+        "width": 720,
+        "height": 560,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

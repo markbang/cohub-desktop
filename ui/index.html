@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cohub Desktop (prototype)</title>
+  <style>
+    body {
+      font-family: -apple-system, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #111;
+      color: #ddd;
+    }
+    button {
+      font-size: 14px;
+      padding: 8px 16px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    button:disabled {
+      background: #444;
+      cursor: not-allowed;
+    }
+    #log {
+      margin-top: 16px;
+      background: #000;
+      border-radius: 6px;
+      padding: 12px;
+      height: 440px;
+      overflow-y: auto;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .line { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <button id="login-btn">登录</button>
+  <span id="status" style="margin-left: 12px; color: #888;"></span>
+  <div id="log"></div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
