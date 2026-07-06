@@ -258,7 +258,6 @@ fn parse_finalized(envelope: &Value) -> Option<TurnFinalized> {
 pub async fn run_subscription<F>(
     access_token: &str,
     space_ids: &[String],
-    initial_session_space: HashMap<String, String>,
     mut on_event: F,
 ) -> Result<(), WsError>
 where
@@ -286,7 +285,7 @@ where
     // session → space 映射：envelope 顶层 spaceId 可能是 null（finalized 尤甚），
     // 靠之前该 session 收到的任何带 spaceId 的事件补全。对齐 web 的
     // `input.spaceId ?? current?.spaceId` 回退策略。
-    let mut session_space: HashMap<String, String> = initial_session_space;
+    let mut session_space: HashMap<String, String> = HashMap::new();
 
     while let Some(msg) = read.next().await {
         let msg = msg?;

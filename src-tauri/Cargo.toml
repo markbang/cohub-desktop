@@ -1,6 +1,6 @@
 [package]
 name = "cohub-desktop"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 description = "Cohub desktop companion: device-flow auth, realtime turn notifications, cloud-drive mount (prototype)"
 

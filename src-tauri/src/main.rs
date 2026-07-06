@@ -63,14 +63,6 @@ struct SubscriptionStatus {
     error: Option<String>,
 }
 
-#[derive(Debug, Serialize, Clone)]
-struct MountInfo {
-    space_id: String,
-    space_name: String,
-    mount_path: String,
-    status: String,
-}
-
 // ---------- 应用状态 ----------
 
 struct AppState {
@@ -264,29 +256,8 @@ fn handle_ws_event(app: &tauri::AppHandle, ev: ws::WsEvent) {
 /// 启动（或重启）WS 订阅任务：订阅全部 Space，断线自动重连。
 fn start_subscription(app: &tauri::AppHandle, space_ids: Vec<String>) {
     let count = space_ids.len();
-    let app_for_init = app.clone();
     let app_for_ws = app.clone();
     let handle = tauri::async_runtime::spawn(async move {
-        // 首次连接前预建 session→space 映射（冷启动兼底）：
-        // finalized 事件的 envelope 顶层 spaceId 可能为 null，靠该映射回退。
-        let mut initial_map: std::collections::HashMap<String, String> =
-            std::collections::HashMap::new();
-        {
-            let client = reqwest::Client::new();
-            let token = match auth::get_valid_access_token(&client).await {
-                Ok(t) => t,
-                Err(_) => return,
-            };
-            for sid in &space_ids {
-                if let Ok(ids) = api::list_space_session_ids(&client, &token, sid).await {
-                    for session_id in ids {
-                        initial_map.insert(session_id, sid.clone());
-                    }
-                }
-            }
-            let _ = app_for_init; // 避免未使用警告。
-        }
-
         loop {
             emit_subscription(
                 &app_for_ws,
@@ -315,24 +286,18 @@ fn start_subscription(app: &tauri::AppHandle, space_ids: Vec<String>) {
             };
 
             let app_inner = app_for_ws.clone();
-            let result =
-                ws::run_subscription(
-                    &token,
-                    &space_ids,
-                    initial_map.clone(),
-                    move |ev| match ev {
-                        ws::WsEvent::Connected => emit_subscription(
-                            &app_inner,
-                            SubscriptionStatus {
-                                phase: "connected".into(),
-                                space_count: count,
-                                error: None,
-                            },
-                        ),
-                        other => handle_ws_event(&app_inner, other),
+            let result = ws::run_subscription(&token, &space_ids, move |ev| match ev {
+                ws::WsEvent::Connected => emit_subscription(
+                    &app_inner,
+                    SubscriptionStatus {
+                        phase: "connected".into(),
+                        space_count: count,
+                        error: None,
                     },
-                )
-                .await;
+                ),
+                other => handle_ws_event(&app_inner, other),
+            })
+            .await;
 
             match result {
                 Ok(()) => {
@@ -370,9 +335,12 @@ async fn post_auth(
     client: &reqwest::Client,
     access_token: &str,
 ) -> Result<(), String> {
-    let me = api::get_me(client, access_token)
-        .await
-        .map_err(|e| e.to_string())?;
+    // 并行拉取账号信息与 Space 列表，减少启动耗时。
+    let (me, spaces) = tokio::try_join!(
+        api::get_me(client, access_token),
+        api::list_spaces(client, access_token),
+    )
+    .map_err(|e| e.to_string())?;
     let display_name = me
         .profile
         .as_ref()
@@ -401,9 +369,6 @@ async fn post_auth(
         },
     );
 
-    let spaces = api::list_spaces(client, access_token)
-        .await
-        .map_err(|e| e.to_string())?;
     emit_spaces(app, spaces.clone());
     // 存入 state，供 only_my_spaces 过滤时查 owner。
     if let Some(state) = app.try_state::<AppState>() {
@@ -424,6 +389,10 @@ async fn post_auth(
 
     let ids: Vec<String> = spaces.iter().map(|s| s.id.clone()).collect();
     start_subscription(app, ids);
+    // 登录成功：托盘应用模式下隐藏窗口，后续交互走托盘。
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.hide();
+    }
     Ok(())
 }
 
@@ -541,6 +510,11 @@ fn logout(app: tauri::AppHandle) -> Result<(), String> {
         },
     );
     emit_spaces(&app, vec![]);
+    // 登出后显示登录窗口。
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
     Ok(())
 }
 
@@ -569,25 +543,6 @@ async fn list_spaces(app: tauri::AppHandle) -> Result<Vec<api::SpaceListItem>, S
         *state.spaces.lock().unwrap() = spaces.clone();
     }
     Ok(spaces)
-}
-
-// --- 云盘挂载（Roadmap，命令存在但未实现）---
-
-#[tauri::command]
-async fn mount_space(space_id: String, mount_path: String) -> Result<MountInfo, String> {
-    Err(format!(
-        "云盘挂载尚未实现（space={space_id}, path={mount_path}）。这是 Roadmap 项，下一步接入 FUSE/WinFSP。"
-    ))
-}
-
-#[tauri::command]
-async fn unmount_space(space_id: String) -> Result<(), String> {
-    Err(format!("云盘挂载尚未实现，无法卸载 space={space_id}。"))
-}
-
-#[tauri::command]
-fn list_mounts() -> Vec<MountInfo> {
-    vec![]
 }
 
 /// 用系统默认浏览器打开 URL（device flow 授权页 / 网页端 session 深链）。
@@ -660,7 +615,10 @@ fn main() {
                 });
             }
             if auth::load_session().is_some() {
-                // 本地有登录态：尝试静默恢复。
+                // 托盘应用：本地有登录态则隐藏窗口静默恢复，恢复失败再显示登录窗口。
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
                 tauri::async_runtime::spawn(async move {
                     let client = reqwest::Client::new();
                     match auth::get_valid_access_token(&client).await {
@@ -675,6 +633,10 @@ fn main() {
                                         ..Default::default()
                                     },
                                 );
+                                if let Some(w) = handle.get_webview_window("main") {
+                                    let _ = w.show();
+                                    let _ = w.set_focus();
+                                }
                             }
                         }
                         Err(e) => {
@@ -686,6 +648,10 @@ fn main() {
                                     ..Default::default()
                                 },
                             );
+                            if let Some(w) = handle.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
                         }
                     }
                 });
@@ -697,6 +663,11 @@ fn main() {
                         ..Default::default()
                     },
                 );
+                // 未登录：显示登录窗口。
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
             }
             Ok(())
         })
@@ -706,9 +677,6 @@ fn main() {
             check_login,
             get_account,
             list_spaces,
-            mount_space,
-            unmount_space,
-            list_mounts,
             open_url,
             get_settings,
             set_settings,

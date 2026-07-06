@@ -53,43 +53,6 @@ pub struct SpaceListItem {
     // 这里只反序列化 id/name/userUuid，其余字段一律不解析、不落盘、不打印。
 }
 
-#[derive(Debug, Deserialize)]
-struct SpaceSessionItem {
-    id: String,
-    // spaceId 字段在响应中存在，但我们已知道它属于哪个 space，无需解析。
-}
-
-#[derive(Debug, Deserialize)]
-struct SpaceSessionsResponse {
-    sessions: Vec<SpaceSessionItem>,
-}
-
-/// 拉取某个 space 下最近的 session id 列表，用于预建 session→space 映射。
-/// 这样即使 finalized 是某 session 的首个事件，也能回退查到 spaceId。
-pub async fn list_space_session_ids(
-    client: &reqwest::Client,
-    access_token: &str,
-    space_id: &str,
-) -> Result<Vec<String>, ApiError> {
-    let resp = client
-        .get(format!(
-            "{API_BASE_URL}/api/spaces/{space_id}/sessions?limit=50"
-        ))
-        .bearer_auth(access_token)
-        .send()
-        .await?;
-    if !resp.status().is_success() {
-        return Err(ApiError::Status(resp.status().as_u16()));
-    }
-    Ok(resp
-        .json::<SpaceSessionsResponse>()
-        .await?
-        .sessions
-        .into_iter()
-        .map(|s| s.id)
-        .collect())
-}
-
 pub async fn list_spaces(
     client: &reqwest::Client,
     access_token: &str,

@@ -1,7 +1,6 @@
 name: release
 
-# 打 tag（v*）时构建并在 GitHub Release 上发布跨平台安装包。
-# Draft release，发布前可在 GitHub UI 里编辑 release notes 后点 Publish。
+# 打 tag（v*）时：跨平台构建并发布 release，再用 changelogithub 生成 release notes。
 on:
   push:
     tags:
@@ -9,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "要发布的 tag（必须已存在，如 v0.0.1）"
+        description: "要发布的 tag（必须已存在，如 v0.0.2）"
         required: true
 
 permissions:
@@ -69,21 +68,27 @@ jobs:
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "Cohub Desktop ${{ github.event.inputs.tag || github.ref_name }}"
-          releaseBody: |
-            Cohub 桌面伴侣 v0.0.1。
-
-            ## 安装
-
-            - **macOS**：下载 `.dmg`（Apple Silicon 选 `aarch64`，Intel 选 `x64`）。首次打开若提示无法验证，右键 → 打开。
-            - **Windows**：下载 `.msi` 或 `.exe` 安装。
-            - **Linux**：下载 `.deb`（Debian/Ubuntu）或 `.AppImage`（通用）。
-
-            ## 功能
-
-            - Device Flow 登录 Cohub
-            - 实时活动监听（全部 Space 的对话流式状态、完结可点击通知）
-            - 系统托盘（未读红点、关闭即最小化到托盘）
-            - 应用设置（仅监听我创建的 Space / 仅监听我的对话 / 通知偏好）
-          releaseDraft: true
+          releaseBody: "安装包见下方 Assets。"
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+  changelog:
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Generate release notes
+        run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

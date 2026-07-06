@@ -1,4 +1,4 @@
-// 与 src-tauri/src/ws.rs 的 TurnProgress / TurnFinalized 字段一一对应（snake_case）。
+// 与 src-tauri 的事件 payload / 命令返回值一一对应（snake_case）。
 
 export type AuthPhase =
   | "idle"
@@ -25,12 +25,6 @@ export interface AuthStatus {
   error?: string;
 }
 
-export interface SpaceInfo {
-  id: string;
-  name: string;
-  user_uuid?: string;
-}
-
 export type SubscriptionPhase =
   | "idle"
   | "connecting"
@@ -43,45 +37,6 @@ export interface SubscriptionStatus {
   phase: SubscriptionPhase;
   space_count: number;
   error?: string;
-}
-
-/** 进行中的对话进度（session.turn.lifecycle + session.turn.patch 累积）。 */
-export interface TurnProgress {
-  space_id?: string;
-  session_id?: string;
-  turn_id?: string;
-  llm_round?: number;
-  provider?: string;
-  model?: string;
-  steps: number;
-  tools: number;
-}
-
-/** 对话完结快照（session.turn.finalized）。 */
-export interface TurnFinalized {
-  space_id?: string;
-  session_id?: string;
-  turn_id?: string;
-  sequence?: number;
-  status?: string;
-  provider?: string;
-  model?: string;
-  message_count: number;
-  tool_call_count: number;
-  usage_input: number;
-  usage_output: number;
-  usage_cache_read: number;
-  duration_ms?: number;
-  last_text?: string;
-  has_error: boolean;
-  user_uuid?: string;
-}
-
-export interface ActivityItem {
-  eventType: string;
-  spaceId?: string;
-  sessionId?: string;
-  ts: number;
 }
 
 export interface AppSettings {

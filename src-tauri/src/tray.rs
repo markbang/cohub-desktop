@@ -24,7 +24,7 @@ fn toggle_window<R: Runtime>(app: &AppHandle<R>) {
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let toggle = MenuItem::with_id(app, "toggle", "显示/隐藏窗口", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "退出 Cohub", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "退出 Cohub Desktop", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&toggle, &quit])?;
 
     let icon = app.default_window_icon().cloned();
@@ -51,7 +51,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     if let Some(ic) = icon {
         builder = builder.icon(ic);
     }
-    builder = builder.tooltip("Cohub · 桌面伴侣");
+    builder = builder.tooltip("Cohub Desktop");
 
     builder.build(app)?;
     Ok(())
@@ -74,7 +74,7 @@ pub fn update_badge<R: Runtime>(app: &AppHandle<R>, unread: usize) {
     let tooltip = if unread > 0 {
         format!("Cohub · {unread} 个对话完结待查看")
     } else {
-        "Cohub · 桌面伴侣".to_string()
+        "Cohub Desktop".to_string()
     };
     let _ = tray.set_tooltip(Some(&tooltip));
 }
